@@ -57,30 +57,29 @@ fn decode_integer(chars: &mut Peekable<Chars>) -> Result<Bencode> {
     Ok(Bencode::Integer(number))
 }
 
+fn decode_list(chars: &mut Peekable<Chars>) -> Result<Bencode> {
+    // Example: "l5:helloi52ee" -> ["hello",52]
+    chars.next(); // skip 'l'
+    let mut rt: Vec<Bencode> = Vec::new();
+    loop {
+        // loop until catch 'e' then advance it
+        if let Some('e') = chars.peek() {
+            chars.next();
+            break;
+        }
+        match decode(chars) {
+            Ok(x) => rt.push(x),
+            Err(err) => return Err(err),
+        }
+    }
+    Ok(Bencode::List(rt))
+}
+
 pub fn decode(chars: &mut Peekable<Chars>) -> Result<Bencode> {
-    let err_msg = format!(
-        "Unhandled encoded value: {}",
-        chars.clone().collect::<String>()
-    );
     match chars.peek() {
         Some(x) if x.is_ascii_digit() => decode_string(chars),
         Some('i') => decode_integer(chars),
-        Some('l') => {
-            // Example: "l5:helloi52ee" -> ["hello",52]
-            chars.next();
-            let mut rt: Vec<Bencode> = Vec::new();
-            loop {
-                if let Some('e') = chars.peek() {
-                    chars.next();
-                    break;
-                }
-                match decode(chars) {
-                    Ok(x) => rt.push(x),
-                    Err(_) => return Err(anyhow!(err_msg)),
-                }
-            }
-            Ok(Bencode::List(rt))
-        }
+        Some('l') => decode_list(chars),
         _ => Err(anyhow!(
             "Unhandled encoded value: {}",
             chars.collect::<String>()
