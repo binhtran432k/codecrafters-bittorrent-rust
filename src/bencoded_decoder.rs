@@ -38,6 +38,25 @@ fn decode_string(chars: &mut Peekable<Chars>) -> Result<Bencode> {
     Ok(Bencode::String(txt))
 }
 
+fn decode_integer(chars: &mut Peekable<Chars>) -> Result<Bencode> {
+    // Example: "i52e" -> 52
+    chars.next(); // skip 'i'
+    let mut number_string = String::new();
+    loop {
+        // loop until catch 'e'
+        match chars.next() {
+            Some('e') => break,
+            Some(c) => number_string.push(c),
+            None => return Err(anyhow!("invalid integer: 'e' is not found")),
+        }
+    }
+    let number = match number_string.parse::<i64>() {
+        Ok(it) => it,
+        Err(_) => return Err(anyhow!("invalid integer: cannot parse number")),
+    };
+    Ok(Bencode::Integer(number))
+}
+
 pub fn decode(chars: &mut Peekable<Chars>) -> Result<Bencode> {
     let err_msg = format!(
         "Unhandled encoded value: {}",
@@ -45,25 +64,7 @@ pub fn decode(chars: &mut Peekable<Chars>) -> Result<Bencode> {
     );
     match chars.peek() {
         Some(x) if x.is_ascii_digit() => decode_string(chars),
-        Some('i') => {
-            // Example: "i52e" -> 52
-            chars.next();
-            let mut number_string = String::new();
-            let mut curr = chars.next();
-            loop {
-                match curr {
-                    Some('e') => break,
-                    Some(c) => number_string.push(c),
-                    None => return Err(anyhow!(err_msg)),
-                }
-                curr = chars.next();
-            }
-            let number = match number_string.parse::<i64>() {
-                Ok(it) => it,
-                Err(_) => return Err(anyhow!(err_msg)),
-            };
-            Ok(Bencode::Integer(number))
-        }
+        Some('i') => decode_integer(chars),
         Some('l') => {
             // Example: "l5:helloi52ee" -> ["hello",52]
             chars.next();
