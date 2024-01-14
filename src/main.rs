@@ -77,7 +77,7 @@ fn decode_bencoded_value(chars: &mut Peekable<Chars>) -> Result<Bencode, String>
     }
 }
 
-// Usage: your_bittorrent.sh decode "<encoded_value>"
+// Usage: bittorrent-rust decode "<encoded_value>"
 fn main() {
     let args: Vec<String> = env::args().collect();
     let command = &args[1];
